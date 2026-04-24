@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Adds an Entra ID group as db_owner to an Azure SQL Database
+// Adds an Entra ID group to a SQL database role on an Azure SQL Database
 // using a deploymentScript with AzurePowerShell.
 //
 // Prerequisites:
@@ -23,7 +23,7 @@ param sqlServerFqdn string
 @description('Name of the target database')
 param sqlDatabaseName string
 
-@description('Display name of the Entra ID group to add as db_owner')
+@description('Display name of the Entra ID group to add to the specified SQL role')
 param entraIdGroupName string
 
 @description('Resource ID of the user-assigned managed identity used to authenticate to Azure SQL')
@@ -45,6 +45,18 @@ param subnetResourceId string = ''
 @description('Name of a storage account in the same VNet for deployment script file shares (required when subnetResourceId is set). The managed identity must have Storage File Data Privileged Contributor on this account.')
 param storageAccountName string = ''
 
+@description('Custom DNS server IP address for the deployment script container group (optional, only needed if using private networking and your DNS is not handled by Azure). Note: the custom DNS server must be able to resolve the SQL Server FQDN to the private endpoint IP address.')
+param customdnsserver string = ''
+
+@description('SQL database role to assign the Entra ID group to (e.g. db_owner, db_datareader, db_datawriter)')
+param sqlRoleName string = 'db_owner'
+
+@description('Enable debug output including JWT token payload (default: false)')
+param enableDebug bool = false
+
+@description('Version of Az PowerShell module to use in the deployment script')
+param azPowerShellVersion string = '15.5'
+
 // ── Computed ────────────────────────────────────────────────────────────────
 
 var usePrivateNetworking = !empty(subnetResourceId) && !empty(storageAccountName)
@@ -62,7 +74,7 @@ resource addGroupToDatabase 'Microsoft.Resources/deploymentScripts@2023-08-01' =
     }
   }
   properties: {
-    azPowerShellVersion: '12.3'
+    azPowerShellVersion: azPowerShellVersion
     forceUpdateTag: forceUpdateTag
     retentionInterval: 'P1D'
     cleanupPreference: 'OnSuccess'
@@ -71,8 +83,11 @@ resource addGroupToDatabase 'Microsoft.Resources/deploymentScripts@2023-08-01' =
       { name: 'SQL_SERVER_FQDN', value: sqlServerFqdn }
       { name: 'SQL_DATABASE_NAME', value: sqlDatabaseName }
       { name: 'ENTRA_GROUP_NAME', value: entraIdGroupName }
+      { name: 'CUSTOM_DNS_SERVER', value: customdnsserver }
+      { name: 'SQL_ROLE_NAME', value: sqlRoleName }
+      { name: 'ENABLE_DEBUG', value: string(enableDebug) }
     ]
-    scriptContent: loadTextContent('scripts/add-entra-group-db-owner.ps1')
+    scriptContent: loadTextContent('scripts/add-entra-group-db-role.ps1')
     containerSettings: usePrivateNetworking
       ? {
           subnetIds: [
