@@ -33,7 +33,7 @@ is a common source of errors:
 
 | Identity | Purpose | Required permissions |
 | --- | --- | --- |
-| **Deployment script managed identity** (parameter `managedIdentityResourceId`) | Runs the PowerShell script, obtains an access token and logs in to SQL Server | Must be set as **Entra ID admin** on the SQL Server (or already have a database user with `CREATE USER` / `ALTER ROLE` rights) |
+| **Deployment script managed identity** (parameter `managedIdentityResourceId`) | Runs the PowerShell script, obtains an access token and logs in to SQL Server | Must be set as **Entra ID admin** on the SQL Server (or already have a database user with `CREATE USER` / `ALTER ROLE` rights). When using private networking, must also have **Storage File Data Privileged Contributor** on the storage account |
 | **SQL Server Entra ID admin** | The identity that is allowed to authenticate to SQL Server | Should be the same as the deployment script MI (see above) |
 | **SQL Server's own identity** (system- or user-assigned MI on the SQL Server *resource*) | Used **internally by SQL Server** to look up Entra ID principals via Microsoft Graph when executing `CREATE USER ... FROM EXTERNAL PROVIDER` | Must have **Directory Readers** role in Entra ID, *or* the following Microsoft Graph application permissions: `User.Read.All`, `GroupMember.Read.All`, `Application.Read.All` |
 
@@ -43,20 +43,20 @@ is a common source of errors:
 
 ## Parameters
 
-| Parameter                    | Required | Description                                                                |
-| ---------------------------- | -------- | -------------------------------------------------------------------------- |
-| `sqlServerFqdn`              | ✅       | FQDN of the SQL Server (e.g. `myserver.database.windows.net`)              |
-| `sqlDatabaseName`            | ✅       | Name of the target database                                                |
-| `entraIdGroupName`           | ✅       | Display name of the Entra ID group                                         |
-| `managedIdentityResourceId`  | ✅       | Full resource ID of the user-assigned managed identity                     |
-| `sqlRoleName`                |          | SQL database role to assign (default: `db_owner`). Examples: `db_datareader`, `db_datawriter`, `db_ddladmin` |
-| `enableDebug`                |          | Enable debug output including JWT token payload (default: `false`)         |
-| `location`                   |          | Azure region (default: resource group location)                            |
-| `forceUpdateTag`             |          | Change to force re-execution (default: `utcNow()`)                        |
-| `subnetResourceId`           |          | Resource ID of the subnet for private networking (see below)               |
-| `storageAccountName`         |          | Name of the storage account in the VNet (required with `subnetResourceId`) |
+| Parameter                    | Required | Description                                                                                                  |
+| ---------------------------- | -------- | ------------------------------------------------------------------------------------------------------------ |
+| `sqlServerFqdn`              | ✅       | FQDN of the SQL Server (e.g. `myserver.database.windows.net`)                                                |
+| `sqlDatabaseName`            | ✅       | Name of the target database                                                                                  |
+| `entraIdGroupName`           | ✅       | Display name of the Entra ID group                                                                           |
+| `managedIdentityResourceId`  | ✅       | Full resource ID of the user-assigned managed identity                                                       |
+| `sqlRoleName`                |          | SQL database role to assign (default: `db_owner`). Examples: `db_datareader`, `db_datawriter`, `db_ddladmin`  |
+| `enableDebug`                |          | Enable debug output including JWT token payload (default: `false`)                                            |
+| `location`                   |          | Azure region (default: resource group location)                                                            |
+| `forceUpdateTag`             |          | Change to force re-execution (default: `utcNow()`)                                                        |
+| `subnetResourceId`           |          | Resource ID of the subnet for private networking (see below)                                             |
+| `storageAccountName`         |          | Name of the storage account in the VNet (required with `subnetResourceId`)                                |
 | `customdnsserver`            |          | IP of a custom DNS server for the container (see [DNS caveat](#dns-caveat-for-private-networking) below) |
-| `azPowerShellVersion`        |          | Version of the Az PowerShell module (default: `15.5`)                      |
+| `azPowerShellVersion`        |          | Version of the Az PowerShell module (default: `15.5`)                                                     |
 
 ## Deploy – public network
 
