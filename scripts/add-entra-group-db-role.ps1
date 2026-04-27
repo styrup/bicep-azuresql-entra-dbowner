@@ -10,6 +10,7 @@ $databaseName = $env:SQL_DATABASE_NAME
 $groupName = $env:ENTRA_GROUP_NAME
 $roleName = if ([string]::IsNullOrEmpty($env:SQL_ROLE_NAME)) { 'db_owner' } else { $env:SQL_ROLE_NAME }
 $enableDebug = $env:ENABLE_DEBUG -eq 'true'
+$usePrivateNetworking = $env:USE_PRIVATE_NETWORKING -eq 'true'
 
 $customDNSServer = $ENV:CUSTOM_DNS_SERVER
 if (-not [string]::IsNullOrEmpty($customDNSServer)) {
@@ -25,6 +26,39 @@ Write-Host "Target : $sqlServerFqdn / $databaseName"
 Write-Host "Group  : $groupName"
 Write-Host "Role   : $roleName"
 Write-Host "Debug  : $enableDebug"
+
+# --- Wait for DNS to resolve to a private IP (private endpoint propagation) ---
+if ($usePrivateNetworking) {
+    $maxRetries = 12
+    $retryDelaySec = 5
+    $privateRanges = @('^10\.', '^172\.(1[6-9]|2[0-9]|3[01])\.', '^192\.168\.')
+
+    for ($i = 1; $i -le $maxRetries; $i++) {
+        try {
+            $addresses = [System.Net.Dns]::GetHostAddresses($sqlServerFqdn)
+            $ip = $addresses[0].IPAddressToString
+            Write-Host "DNS resolved $sqlServerFqdn -> $ip (attempt $i/$maxRetries)"
+
+            $isPrivate = $privateRanges | Where-Object { $ip -match $_ }
+            if ($isPrivate) {
+                Write-Host "Resolved to private IP. Proceeding."
+                break
+            }
+
+            Write-Host "WARNING: Resolved to non-private IP. DNS may not have propagated yet."
+        }
+        catch {
+            Write-Host "DNS lookup failed (attempt $i/$maxRetries): $_"
+        }
+
+        if ($i -eq $maxRetries) {
+            Write-Host "WARNING: DNS did not resolve to a private IP after $maxRetries attempts. Proceeding anyway."
+        }
+        else {
+            Start-Sleep -Seconds $retryDelaySec
+        }
+    }
+}
 
 # --- Obtain access token for Azure SQL via the managed identity ---
 $tokenResponse = Get-AzAccessToken -ResourceUrl 'https://database.windows.net/'

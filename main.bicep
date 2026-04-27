@@ -64,7 +64,7 @@ var usePrivateNetworking = !empty(subnetResourceId) && !empty(storageAccountName
 // ── Deployment Script ───────────────────────────────────────────────────────
 
 resource addGroupToDatabase 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
-  name: 'add-entra-group-db-owner'
+  name: 'add-entra-group-db-role-${uniqueString(sqlServerFqdn, sqlDatabaseName, entraIdGroupName)}'
   location: location
   kind: 'AzurePowerShell'
   identity: {
@@ -86,6 +86,7 @@ resource addGroupToDatabase 'Microsoft.Resources/deploymentScripts@2023-08-01' =
       { name: 'CUSTOM_DNS_SERVER', value: customdnsserver }
       { name: 'SQL_ROLE_NAME', value: sqlRoleName }
       { name: 'ENABLE_DEBUG', value: string(enableDebug) }
+      { name: 'USE_PRIVATE_NETWORKING', value: string(usePrivateNetworking) }
     ]
     scriptContent: loadTextContent('scripts/add-entra-group-db-role.ps1')
     containerSettings: usePrivateNetworking

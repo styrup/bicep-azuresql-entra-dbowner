@@ -164,6 +164,8 @@ Two ways to handle this:
    on-premises forwarding), pass its IP via the `customdnsserver` parameter. The
    PowerShell script will use this server explicitly for name resolution via simply overwrite */etc/resolv.conf* with the specified DNS server.
 
+When useing private networking, **always verify the DNS resolution** of the Azure Storage account and the Container instance. It must resolve to private IPs, otherwise the deployment script won't be able to access the storage account. To be sure please add a local dns zone and add the storage account name with the private endpoint IP as an A record.
+
 ### Subnet and storage account requirements
 
 | Resource            | Configuration                                                                                         |
